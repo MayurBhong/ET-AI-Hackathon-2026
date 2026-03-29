@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RevAgent — AI Sales Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c10;
+    --surface: #0d1117;
+    --surface2: #161b22;
+    --border: #21262d;
+    --border-bright: #30363d;
+    --text: #e6edf3;
+    --text-muted: #7d8590;
+    --text-dim: #484f58;
+    --green: #3fb950;
+    --green-dim: #1a3726;
+    --red: #f85149;
+    --red-dim: #3d1f1f;
+    --yellow: #d29922;
+    --yellow-dim: #2d2208;
+    --blue: #58a6ff;
+    --blue-dim: #0d2044;
+    --purple: #bc8cff;
+    --purple-dim: #1e1535;
+    --orange: #ff7b52;
+    --accent: #f0883e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Layout */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+  }
+  .main { margin-left: 220px; flex: 1; min-width: 0; }
+
+  /* Sidebar */
+  .logo-wrap {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+  .logo-sub { font-size: 10px; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; font-family: 'DM Mono', monospace; }
+  
+  .nav { padding: 12px 12px; flex: 1; }
+  .nav-section { margin-bottom: 20px; }
+  .nav-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; padding: 0 8px; margin-bottom: 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 6px;
+    cursor: pointer; font-size: 13.5px; color: var(--text-muted);
+    transition: all 0.15s; margin-bottom: 2px;
+    font-weight: 400;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--blue-dim); color: var(--blue); }
+  .nav-item .icon { width: 16px; text-align: center; font-size: 14px; }
+  .nav-badge {
+    margin-left: auto; background: var(--red); color: white;
+    font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .sidebar-footer {
+    padding: 16px 20px; border-top: 1px solid var(--border);
+    font-size: 12px; color: var(--text-muted);
+  }
+  .ai-status { display: flex; align-items: center; gap: 8px; }
+  .pulse { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.85); } }
+
+  /* Top bar */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 32px; border-bottom: 1px solid var(--border);
+    background: var(--surface); position: sticky; top: 0; z-index: 50;
+  }
+  .page-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+  .topbar-actions { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none; transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border-bright); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+  /* Content */
+  .content { padding: 28px 32px; }
+
+  /* Stat cards */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: var(--border-bright); }
+  .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+  .stat-delta { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+  .stat-delta.up { color: var(--green); }
+  .stat-delta.down { color: var(--red); }
+  .stat-delta.warn { color: var(--yellow); }
+
+  /* Section headers */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .section-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; }
+  .section-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Deals table */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 11px 16px; text-align: left; font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid var(--border); background: var(--surface2); font-weight: 400; }
+  td { padding: 12px 16px; font-size: 13.5px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  tr.clickable { cursor: pointer; }
+
+  /* Risk badges */
+  .risk-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; font-family: 'DM Mono', monospace;
+  }
+  .risk-low { background: var(--green-dim); color: var(--green); }
+  .risk-medium { background: var(--yellow-dim); color: var(--yellow); }
+  .risk-high { background: var(--red-dim); color: var(--red); }
+  .risk-critical { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); animation: criticalPulse 2s infinite; }
+  @keyframes criticalPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+  
+  .stage-badge {
+    display: inline-flex; padding: 3px 9px; border-radius: 4px; font-size: 11px;
+    background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Risk bar */
+  .risk-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .risk-bar { height: 4px; flex: 1; max-width: 80px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .risk-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  .risk-num { font-family: 'DM Mono', monospace; font-size: 12px; width: 28px; }
+
+  /* Lead cards */
+  .leads-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+  .lead-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px; transition: all 0.2s; cursor: pointer;
+  }
+  .lead-card:hover { border-color: var(--blue); transform: translateY(-1px); }
+  .lead-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+  .lead-avatar {
+    width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px;
+    background: linear-gradient(135deg, var(--blue-dim), var(--purple-dim));
+    border: 1px solid var(--border-bright);
+  }
+  .lead-name { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+  .lead-role { font-size: 12px; color: var(--text-muted); }
+  .lead-company { font-size: 12px; color: var(--blue); margin-top: 2px; }
+  .lead-signals { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+  .signal-tag {
+    font-size: 10px; padding: 2px 8px; border-radius: 3px;
+    background: var(--blue-dim); color: var(--blue);
+    font-family: 'DM Mono', monospace;
+  }
+  .score-chip {
+    font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800;
+    padding: 4px 10px; border-radius: 8px;
+  }
+  .score-a { color: var(--green); background: var(--green-dim); }
+  .score-b { color: var(--blue); background: var(--blue-dim); }
+  .score-c { color: var(--yellow); background: var(--yellow-dim); }
+
+  /* Modal / Detail panel */
+  .panel-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200;
+    display: flex; align-items: flex-start; justify-content: flex-end;
+    animation: fadeIn 0.15s;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .panel {
+    width: 540px; max-width: 95vw; height: 100vh; overflow-y: auto;
+    background: var(--surface); border-left: 1px solid var(--border);
+    animation: slideIn 0.2s ease-out;
+  }
+  @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  .panel-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; background: var(--surface); z-index: 10;
+  }
+  .panel-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; }
+  .panel-body { padding: 24px; }
+  .close-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 4px; }
+  .close-btn:hover { color: var(--text); }
+
+  /* Info blocks */
+  .info-block { margin-bottom: 22px; }
+  .info-block-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); font-family: 'DM Mono', monospace; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .info-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
+  .info-key { color: var(--text-muted); }
+  .info-val { font-weight: 500; text-align: right; max-width: 260px; }
+
+  /* AI output blocks */
+  .ai-block {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; margin-bottom: 14px;
+  }
+  .ai-block-label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--purple); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .ai-block-content { font-size: 13px; line-height: 1.6; white-space: pre-wrap; color: var(--text); }
+
+  /* Action list */
+  .action-list { list-style: none; }
+  .action-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .action-item:last-child { border-bottom: none; }
+  .action-priority { font-family: 'DM Mono', monospace; font-size: 10px; padding: 2px 6px; border-radius: 3px; height: fit-content; margin-top: 2px; }
+  .priority-high { background: var(--red-dim); color: var(--red); }
+  .priority-medium { background: var(--yellow-dim); color: var(--yellow); }
+  .action-text { flex: 1; font-size: 13px; }
+  .action-rationale { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+  /* Email preview */
+  .email-preview {
+    background: #0a0f14; border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden; font-family: 'DM Mono', monospace;
+  }
+  .email-header { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .email-field { display: flex; gap: 10px; font-size: 12px; padding: 3px 0; }
+  .email-field-key { color: var(--text-muted); width: 50px; flex-shrink: 0; }
+  .email-field-val { color: var(--text); }
+  .email-body { padding: 14px; font-size: 12px; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+
+  /* Competitor alerts */
+  .alert-card {
+    background: var(--yellow-dim); border: 1px solid var(--yellow);
+    border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; display: flex; gap: 14px;
+  }
+  .alert-icon { font-size: 18px; }
+  .alert-content { flex: 1; }
+  .alert-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--yellow); }
+  .alert-body { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .alert-meta { font-size: 11px; color: var(--text-dim); margin-top: 5px; font-family: 'DM Mono', monospace; }
+
+  .alert-card.red { background: var(--red-dim); border-color: var(--red); }
+  .alert-card.red .alert-title { color: var(--red); }
+
+  /* Loading */
+  .loading-wrap { display: flex; align-items: center; gap: 10px; padding: 20px; color: var(--text-muted); font-size: 13px; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .tab { padding: 10px 18px; font-size: 13.5px; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab-count { font-family: 'DM Mono', monospace; font-size: 10px; background: var(--surface2); padding: 1px 6px; border-radius: 10px; margin-left: 5px; }
+
+  /* Revenue metric */
+  .revenue-highlight { 
+    background: linear-gradient(135deg, #0d2044, #1e1535);
+    border: 1px solid var(--blue); border-radius: 10px; padding: 20px 24px;
+    margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .rev-label { font-size: 12px; color: var(--blue); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .rev-value { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; }
+  .rev-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 48px 24px; color: var(--text-muted); font-size: 13px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .leads-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo-wrap">
+      <div class="logo">Rev<span>Agent</span></div>
+      <div class="logo-sub">AI Revenue Operations</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">
+        <div class="nav-label">Overview</div>
+        <div class="nav-item active" onclick="showView('dashboard')">
+          <span class="icon">◈</span> Dashboard
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Pipeline</div>
+        <div class="nav-item" onclick="showView('deals')">
+          <span class="icon">⬡</span> Deals
+          <span class="nav-badge" id="risk-count">—</span>
+        </div>
+        <div class="nav-item" onclick="showView('leads')">
+          <span class="icon">◎</span> Leads
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Intelligence</div>
+        <div class="nav-item" onclick="showView('churn')">
+          <span class="icon">⚠</span> Churn Risk
+        </div>
+        <div class="nav-item" onclick="showView('competitors')">
+          <span class="icon">⊕</span> Competitors
+        </div>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="ai-status">
+        <div class="pulse"></div>
+        <span style="font-size:12px">AI Engine Active</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- DASHBOARD -->
+    <div id="view-dashboard">
+      <div class="topbar">
+        <div>
+          <div class="page-title">Command Center</div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost btn-sm" onclick="loadAllDeals()">↻ Refresh Analysis</button>
+          <button class="btn btn-primary btn-sm" onclick="showView('leads')">+ Score New Lead</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Pipeline Value</div>
+            <div class="stat-value" style="color:var(--blue)">$533K</div>
+            <div class="stat-delta up">↑ 18% vs last quarter</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">At-Risk Deals</div>
+            <div class="stat-value" style="color:var(--red)" id="dash-risk">—</div>
+            <div class="stat-delta warn" id="dash-risk-val">Analyzing...</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Conversion Rate</div>
+            <div class="stat-value" style="color:var(--green)">34%</div>
+            <div class="stat-delta up">↑ 20% with AI outreach</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg Deal Cycle</div>
+            <div class="stat-value">42d</div>
+            <div class="stat-delta up">↓ 30% faster than baseline</div>
+          </div>
+        </div>
+
+        <div class="revenue-highlight">
+          <div>
+            <div class="rev-label">Estimated Revenue Recovered by AI</div>
+            <div class="rev-value">₹83,00,000</div>
+            <div class="rev-sub">via deal recovery, churn prevention, faster closes · last 6 months</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Manual effort saved</div>
+            <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--purple)">420 hrs</div>
+            <div style="font-size:12px;color:var(--text-muted)">= 3 FTE/month</div>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <div>
+            <div class="section-title">Deal Risk Monitor</div>
+            <div class="section-sub">AI-analyzed in real time · click a deal for full breakdown</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="showView('deals')">View All →</button>
+        </div>
+        <div id="dash-deals-table">
+          <div class="loading-wrap"><div class="spinner"></div>Running AI risk analysis on all deals...</div>
+        </div>
+
+        <div class="section-header" style="margin-top:8px">
+          <div>
+            <div class="section-title">Competitor Alerts</div>
+          </div>
+        </div>
+        <div id="dash-alerts">
+          <div class="loading-wrap"><div class="spinner"></div>Scanning news feed...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEALS VIEW -->
+    <div id="view-deals" style="display:none">
+      <div class="topbar">
+        <div class="page-title">Deal Intelligence</div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost btn-sm" onclick="loadAllDeals()">↻ Re-analyze All</button>
+        </div>
+      </div>
+      <div class="content">
+        <div id="deals-content">
+          <div class="loading-wrap"><div class="spinner"></div>Analyzing deals with AI...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADS VIEW -->
+    <div id="view-leads" style="display:none">
+      <div class="topbar">
+        <div class="page-title">Lead Intelligence</div>
+        <div class="topbar-actions">
+          <button class="btn btn-primary btn-sm" onclick="scoreAllLeads()">⚡ Score All Leads</button>
+        </div>
+      </div>
+      <div class="content">
+        <div id="leads-content">
+          <div class="loading-wrap"><div class="spinner"></div>Scoring leads with AI...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHURN VIEW -->
+    <div id="view-churn" style="display:none">
+      <div class="topbar">
+        <div class="page-title">Churn Risk Analysis</div>
+      </div>
+      <div class="content" id="churn-content">
+        <div class="loading-wrap"><div class="spinner"></div>Running churn prediction...</div>
+      </div>
+    </div>
+
+    <!-- COMPETITORS VIEW -->
+    <div id="view-competitors" style="display:none">
+      <div class="topbar">
+        <div class="page-title">Competitive Intelligence</div>
+      </div>
+      <div class="content" id="competitors-content">
+        <div class="loading-wrap"><div class="spinner"></div>Scanning competitor signals...</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Detail Panel -->
+<div class="panel-overlay" id="panel-overlay" style="display:none" onclick="closePanel(event)">
+  <div class="panel" id="panel">
+    <div class="panel-header">
+      <div class="panel-title" id="panel-title">Detail</div>
+      <button class="close-btn" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body" id="panel-body"></div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8000/api';
+let dealResults = [];
+let leadResults = [];
+let currentView = 'dashboard';
+
+// ─── Navigation ───────────────────────────────────────
+function showView(view) {
+  document.querySelectorAll('[id^="view-"]').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + view).style.display = 'block';
+  currentView = view;
+  if (view === 'deals') loadAllDeals();
+  if (view === 'leads') scoreAllLeads();
+  if (view === 'churn') loadChurn();
+  if (view === 'competitors') loadCompetitors();
+}
+
+// ─── API Helpers ──────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const r = await fetch(API + path, opts);
+  return r.json();
+}
+
+// ─── Mock Data (fallback when backend not running) ────
+const MOCK_DEALS = [
+  { deal_id:'D004', deal_name:'LogiFlow - Operations Intelligence', value:200000, risk_score:88, risk_level:'CRITICAL', deal_health:'LIKELY_LOST', top_risk:'No reply for 14 days, competitor evaluation active' },
+  { deal_id:'D001', deal_name:'GrowthLoop - Enterprise License', value:120000, risk_score:72, risk_level:'HIGH', deal_health:'AT_RISK', top_risk:'Stalled 18 days in Negotiation, no reply 9 days' },
+  { deal_id:'D005', deal_name:'CloudScale AI - Partnership Deal', value:90000, risk_score:28, risk_level:'LOW', deal_health:'HEALTHY', top_risk:'Active engagement, recent demo booked' },
+  { deal_id:'D002', deal_name:'TechNova - Sales Automation Suite', value:75000, risk_score:22, risk_level:'LOW', deal_health:'HEALTHY', top_risk:'Strong positive sentiment, fast reply cadence' },
+  { deal_id:'D003', deal_name:'FinEdge - RevOps Platform', value:48000, risk_score:45, risk_level:'MEDIUM', deal_health:'AT_RISK', top_risk:'Competitor Gong mentioned in thread' },
+];
+
+const MOCK_LEADS = [
+  { lead_id:'L005', name:'Emily Chen', company:'CloudScale AI', score:{ score:91, grade:'A', reasoning:'CRO title with active demo and referral — highest quality signal stack.', top_signals:['booked demo','referral from partner','CRO role'], recommended_action:'Call within 2 hours' }, email_preview:'How CloudScale AI can close 35% more deals with AI' },
+  { lead_id:'L003', name:'Sarah Mitchell', company:'GrowthLoop US', score:{ score:85, grade:'A', reasoning:'Demo request + case study visit = strong buying intent. RevOps title is ideal ICP.', top_signals:['demo request','visited case studies','RevOps title'], recommended_action:'Send personalized demo confirmation' }, email_preview:'The RevOps play that 3x\'d pipeline at MarTech leaders' },
+  { lead_id:'L001', name:'Priya Sharma', company:'TechNova India', score:{ score:78, grade:'B', reasoning:'VP title + pricing + ROI calculator = active evaluation mode.', top_signals:['visited pricing page','downloaded ROI calculator'], recommended_action:'Send ROI model within 24h' }, email_preview:'How TechNova can close 20% more deals with AI' },
+  { lead_id:'L002', name:'Amit Verma', company:'FinEdge Solutions', score:{ score:65, grade:'B', reasoning:'Competitor search + webinar = aware but not fully committed.', top_signals:['competitor comparison search','webinar attended'], recommended_action:'Share competitive battle card' }, email_preview:'Why FinEdge teams choose RevAgent over the alternatives' },
+  { lead_id:'L004', name:'Rajesh Kumar', company:'LogiFlow India', score:{ score:58, grade:'C', reasoning:'Email engagement but low recency. Operations role not primary buyer.', top_signals:['email opened 3x','pricing page visit'], recommended_action:'Nurture with industry content' }, email_preview:'How logistics leaders cut 40% manual ops work' },
+];
+
+const MOCK_CHURN = {
+  account: { company:'OldClient Corp', usage_drop_pct:62, nps_score:22, last_login_days_ago:18, contract_renewal_days:45 },
+  prediction: {
+    churn_probability: 0.81, churn_risk:'CRITICAL', 
+    key_risk_factors:['Usage dropped 62% in 30 days','NPS score critically low at 22','No login in 18 days'],
+    days_to_likely_churn: 45, revenue_at_risk: 48000,
+    intervention_actions:[
+      {type:'EXECUTIVE_CALL',urgency:'IMMEDIATE',description:'Schedule emergency executive sponsor call to understand blockers'},
+      {type:'QBR',urgency:'THIS_WEEK',description:'Run emergency QBR to surface product gaps'},
+      {type:'DISCOUNT',urgency:'THIS_WEEK',description:'Prepare retention offer: 20% off renewal + dedicated CSM'},
+    ],
+    retention_email_subject:"Let's make OldClient Corp successful — quick chat?",
+    retention_email_body:"Hi,\n\nI noticed your team's usage has shifted recently. I'd love to understand what's changed and what we can do better.\n\nCan we find 30 minutes this week? I want to make sure you're getting full value — and if something isn't working, let's fix it together.\n\nBest,\nCustomer Success Team",
+  }
+};
+
+const MOCK_COMPETITORS = {
+  signals:[
+    { id:'C001', competitor:'Salesforce', headline:'Salesforce launches AI-powered RevOps suite at 40% lower price', source:'TechCrunch', date:'2025-03-22', impact:'high', affected_deals:['D001','D004'] },
+    { id:'C002', competitor:'Gong', headline:'Gong raises $200M, announces fintech vertical product', source:'Forbes', date:'2025-03-21', impact:'medium', affected_deals:['D003'] },
+  ],
+  threat_assessments:[
+    { signal:{competitor:'Salesforce'}, affected_deal_count:2, revenue_at_risk:320000, threat_level:'HIGH', recommended_response:'Emphasize RevAgent\'s 10x faster implementation (2 weeks vs 6 months), no per-seat pricing, and AI-native architecture.' },
+    { signal:{competitor:'Gong'}, affected_deal_count:1, revenue_at_risk:48000, threat_level:'MEDIUM', recommended_response:'Gong is conversation intelligence only. RevAgent is end-to-end: prospecting → deal management → churn prevention.' },
+  ],
+  total_revenue_at_risk: 368000,
+};
+
+// ─── Load Deals ────────────────────────────────────────
+async function loadAllDeals() {
+  try {
+    const data = await apiFetch('/analyze-all-deals', { method: 'POST' });
+    dealResults = data.results || MOCK_DEALS;
+  } catch { dealResults = MOCK_DEALS; }
+  
+  const highRisk = dealResults.filter(d => (d.risk_score||0) > 60).length;
+  const el = document.getElementById('dash-risk');
+  const valEl = document.getElementById('dash-risk-val');
+  if (el) { el.textContent = highRisk; }
+  if (valEl) { valEl.textContent = `$${dealResults.filter(d=>(d.risk_score||0)>60).reduce((s,d)=>s+d.value,0).toLocaleString()} value at risk`; }
+  const rc = document.getElementById('risk-count');
+  if (rc) rc.textContent = highRisk;
+
+  renderDealsTable(document.getElementById('dash-deals-table'), true);
+  renderDealsTable(document.getElementById('deals-content'), false);
+}
+
+function renderDealsTable(container, compact) {
+  if (!container) return;
+  const deals = compact ? dealResults.slice(0, 5) : dealResults;
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Deal</th>
+            <th>Stage</th>
+            <th>Value</th>
+            <th>Risk Score</th>
+            <th>Status</th>
+            ${!compact ? '<th>Top Risk</th>' : ''}
+          </tr>
+        </thead>
+        <tbody>
+          ${deals.map(d => `
+            <tr class="clickable" onclick="openDealPanel('${d.deal_id}')">
+              <td><span style="font-weight:500">${d.deal_name}</span></td>
+              <td><span class="stage-badge">Negotiation</span></td>
+              <td style="font-family:'DM Mono',monospace">$${(d.value||0).toLocaleString()}</td>
+              <td>
+                <div class="risk-bar-wrap">
+                  <div class="risk-bar"><div class="risk-bar-fill" style="width:${d.risk_score||0}%;background:${riskColor(d.risk_score||0)}"></div></div>
+                  <span class="risk-num" style="color:${riskColor(d.risk_score||0)}">${d.risk_score||0}</span>
+                </div>
+              </td>
+              <td><span class="risk-badge risk-${(d.risk_level||'low').toLowerCase()}">${d.risk_level||'LOW'}</span></td>
+              ${!compact ? `<td style="font-size:12px;color:var(--text-muted);max-width:200px">${(d.top_risk||'').substring(0,80)}${(d.top_risk||'').length>80?'…':''}</td>` : ''}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function riskColor(score) {
+  if (score > 75) return 'var(--red)';
+  if (score > 55) return 'var(--orange)';
+  if (score > 35) return 'var(--yellow)';
+  return 'var(--green)';
+}
+
+// ─── Load Leads ────────────────────────────────────────
+async function scoreAllLeads() {
+  const container = document.getElementById('leads-content');
+  if (container) container.innerHTML = '<div class="loading-wrap"><div class="spinner"></div>AI scoring all leads...</div>';
+  try {
+    const data = await apiFetch('/score-all-leads', { method: 'POST' });
+    leadResults = data.results || MOCK_LEADS;
+  } catch { leadResults = MOCK_LEADS; }
+  renderLeadsGrid();
+}
+
+function renderLeadsGrid() {
+  const container = document.getElementById('leads-content');
+  if (!container) return;
+  container.innerHTML = `
+    <div class="leads-grid">
+      ${leadResults.map(l => `
+        <div class="lead-card" onclick="openLeadPanel('${l.lead_id}')">
+          <div class="lead-header">
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <div class="lead-avatar">${(l.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+              <div>
+                <div class="lead-name">${l.name}</div>
+                <div class="lead-company">${l.company}</div>
+              </div>
+            </div>
+            <div class="score-chip score-${(l.score?.grade||'B').toLowerCase()}">${l.score?.score||0}</div>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${l.score?.reasoning||''}</div>
+          <div class="lead-signals">
+            ${(l.score?.top_signals||[]).map(s=>`<span class="signal-tag">${s}</span>`).join('')}
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted)">
+            📧 <em style="color:var(--text)">${l.email_preview||''}</em>
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+// ─── Load Churn ────────────────────────────────────────
+async function loadChurn() {
+  const container = document.getElementById('churn-content');
+  let data;
+  try {
+    data = await apiFetch('/predict-churn', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({account_id:'ACC001'}) });
+  } catch { data = MOCK_CHURN; }
+
+  const p = data.prediction;
+  const a = data.account;
+  const pct = Math.round((p.churn_probability||0)*100);
+  const urgency = p.churn_risk === 'CRITICAL' ? 'var(--red)' : p.churn_risk === 'HIGH' ? 'var(--orange)' : 'var(--yellow)';
+
+  container.innerHTML = `
+    <div style="max-width:760px">
+      <div style="display:flex;gap:20px;margin-bottom:24px">
+        <div class="stat-card" style="flex:1">
+          <div class="stat-label">Churn Probability</div>
+          <div class="stat-value" style="color:${urgency}">${pct}%</div>
+          <div class="risk-bar" style="max-width:100%;margin-top:8px"><div class="risk-bar-fill" style="width:${pct}%;background:${urgency}"></div></div>
+        </div>
+        <div class="stat-card" style="flex:1">
+          <div class="stat-label">Revenue at Risk</div>
+          <div class="stat-value" style="color:var(--red)">$${(p.revenue_at_risk||0).toLocaleString()}</div>
+          <div class="stat-delta warn">Renewal in ${a.contract_renewal_days} days</div>
+        </div>
+        <div class="stat-card" style="flex:1">
+          <div class="stat-label">Risk Level</div>
+          <div class="stat-value" style="color:${urgency};font-size:22px">${p.churn_risk}</div>
+          <div class="stat-delta warn">NPS: ${a.nps_score} · Login: ${a.last_login_days_ago}d ago</div>
+        </div>
+      </div>
+      
+      <div class="info-block">
+        <div class="info-block-title">Risk Factors</div>
+        ${(p.key_risk_factors||[]).map(f=>`<div class="alert-card red" style="margin-bottom:8px;padding:10px 14px"><div class="alert-icon">⚠</div><div class="alert-content"><div class="alert-title" style="font-size:13px">${f}</div></div></div>`).join('')}
+      </div>
+
+      <div class="info-block">
+        <div class="info-block-title">Intervention Actions</div>
+        <ul class="action-list">
+          ${(p.intervention_actions||[]).map(a=>`
+            <li class="action-item">
+              <span class="action-priority priority-${a.urgency==='IMMEDIATE'?'high':'medium'}">${a.urgency}</span>
+              <div class="action-text">
+                <strong>${a.type.replace(/_/g,' ')}</strong>
+                <div class="action-rationale">${a.description}</div>
+              </div>
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+
+      <div class="info-block">
+        <div class="info-block-title">AI-Generated Retention Email</div>
+        <div class="email-preview">
+          <div class="email-header">
+            <div class="email-field"><span class="email-field-key">Subject:</span><span class="email-field-val">${p.retention_email_subject||''}</span></div>
+            <div class="email-field"><span class="email-field-key">To:</span><span class="email-field-val">account@oldclient.com</span></div>
+          </div>
+          <div class="email-body">${p.retention_email_body||''}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── Load Competitors ──────────────────────────────────
+async function loadCompetitors() {
+  const container = document.getElementById('competitors-content');
+  let data;
+  try { data = await apiFetch('/competitor-signals'); } 
+  catch { data = MOCK_COMPETITORS; }
+
+  container.innerHTML = `
+    <div style="max-width:760px">
+      <div class="stat-card" style="margin-bottom:24px;background:var(--red-dim);border-color:var(--red)">
+        <div class="stat-label" style="color:var(--red)">Total Revenue at Risk from Competitor Activity</div>
+        <div class="stat-value" style="color:var(--red)">$${(data.total_revenue_at_risk||0).toLocaleString()}</div>
+        <div class="stat-delta warn">across ${data.signals?.length||0} active competitor signals</div>
+      </div>
+      
+      <div class="section-header"><div class="section-title">Active Signals</div></div>
+      ${(data.signals||[]).map(s=>`
+        <div class="alert-card ${s.impact==='high'?'red':''}">
+          <div class="alert-icon">${s.impact==='high'?'🔴':'🟡'}</div>
+          <div class="alert-content">
+            <div class="alert-title">${s.competitor}: ${s.headline}</div>
+            <div class="alert-body">Affects ${s.affected_deals?.length||0} active deals in your pipeline.</div>
+            <div class="alert-meta">📰 ${s.source} · ${s.date}</div>
+          </div>
+        </div>
+      `).join('')}
+      
+      <div class="section-header" style="margin-top:24px"><div class="section-title">Battle Cards</div></div>
+      ${(data.threat_assessments||[]).map(t=>`
+        <div class="ai-block">
+          <div class="ai-block-label">🤖 vs ${t.signal.competitor} · Revenue at Risk: $${(t.revenue_at_risk||0).toLocaleString()}</div>
+          <div class="ai-block-content">${t.recommended_response}</div>
+        </div>
+      `).join('')}
+
+      <div class="info-block" style="margin-top:24px">
+        <div class="info-block-title">Business Impact</div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:20px">
+          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:16px">RevAgent vs Competitors — Why We Win</div>
+          ${[
+            ['Implementation Speed','2 weeks vs 6 months (Salesforce)','↑ 12x faster time-to-value'],
+            ['AI Architecture','AI-native vs bolt-on AI','↑ 3x more accurate predictions'],
+            ['Scope','End-to-end RevOps vs point solution','↑ 2x ROI on same budget'],
+            ['Pricing','Usage-based vs per-seat','↓ 40% lower TCO'],
+          ].map(([k,v,d])=>`
+            <div class="info-row" style="border-bottom:1px solid var(--border);padding:10px 0">
+              <div class="info-key">${k}</div>
+              <div style="text-align:right">
+                <div style="font-size:13px;font-weight:500">${v}</div>
+                <div style="font-size:11px;color:var(--green)">${d}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─── Panel: Deal Detail ────────────────────────────────
+async function openDealPanel(dealId) {
+  showPanel('Loading Deal Analysis…', '<div class="loading-wrap"><div class="spinner"></div>AI analyzing deal...</div>');
+  let data;
+  try {
+    data = await apiFetch('/analyze-deal', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({deal_id:dealId,include_thread:true}) });
+  } catch {
+    // Fallback mock
+    const dr = dealResults.find(d=>d.deal_id===dealId);
+    data = {
+      deal:{name:dr?.deal_name||dealId,stage:'Negotiation',value:dr?.value||0,days_in_stage:12,last_reply_days_ago:9,close_date:'2025-04-15'},
+      analysis:{risk_score:dr?.risk_score||50,risk_level:dr?.risk_level||'MEDIUM',risk_reasons:[dr?.top_risk||'Deal stalled'],deal_health:dr?.deal_health||'AT_RISK',recovery_actions:[{priority:'HIGH',action:'Send re-engagement email',rationale:'Break silence with new value prop'},{priority:'MEDIUM',action:'Offer executive call',rationale:'Elevate the conversation'}],suggested_email_subject:'Quick question about your evaluation',suggested_email_body:'Hi,\n\nWanted to check in — any questions or blockers on your end? Happy to jump on a quick call to address anything.\n\nBest,\nAlex'},
+      email_thread:{messages:[],sentiment:'cautious',competitor_mentions:[]},
+      competitor_threats:[],
+    };
+  }
+
+  const d = data.deal; const a = data.analysis; const t = data.email_thread;
+  document.getElementById('panel-title').textContent = d.name;
+  document.getElementById('panel-body').innerHTML = `
+    <div class="info-block">
+      <div class="info-block-title">Deal Overview</div>
+      ${[['Stage',d.stage],['Value','$'+(d.value||0).toLocaleString()],['Days in Stage',d.days_in_stage+' days'],['Last Reply',d.last_reply_days_ago+' days ago'],['Close Date',d.close_date]].map(([k,v])=>`<div class="info-row"><div class="info-key">${k}</div><div class="info-val">${v}</div></div>`).join('')}
+    </div>
+
+    <div class="info-block">
+      <div class="info-block-title">AI Risk Assessment</div>
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:40px;font-weight:800;color:${riskColor(a.risk_score||0)}">${a.risk_score||0}</div>
+          <div style="font-size:11px;color:var(--text-muted)">Risk Score</div>
+        </div>
+        <div>
+          <div><span class="risk-badge risk-${(a.risk_level||'low').toLowerCase()}">${a.risk_level||'LOW'}</span></div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:6px">${a.deal_health||''}</div>
+        </div>
+      </div>
+      ${(a.risk_reasons||[]).map(r=>`<div style="font-size:12px;color:var(--text-muted);padding:4px 0;border-bottom:1px solid var(--border)">⚠ ${r}</div>`).join('')}
+    </div>
+
+    ${t ? `
+    <div class="info-block">
+      <div class="info-block-title">Email Thread Signals</div>
+      <div class="info-row"><div class="info-key">Sentiment</div><div class="info-val" style="color:${t.sentiment==='positive'?'var(--green)':t.sentiment==='negative'?'var(--red)':'var(--yellow)'}">${t.sentiment||'neutral'}</div></div>
+      <div class="info-row"><div class="info-key">Competitor Mentions</div><div class="info-val">${(t.competitor_mentions||[]).join(', ')||'None'}</div></div>
+      <div class="info-row"><div class="info-key">Messages</div><div class="info-val">${(t.messages||[]).length} emails in thread</div></div>
+    </div>` : ''}
+
+    <div class="info-block">
+      <div class="info-block-title">Recovery Actions</div>
+      <ul class="action-list">
+        ${(a.recovery_actions||[]).map(act=>`
+          <li class="action-item">
+            <span class="action-priority priority-${(act.priority||'medium').toLowerCase()}">${act.priority}</span>
+            <div class="action-text">
+              ${act.action}
+              <div class="action-rationale">${act.rationale}</div>
+            </div>
+          </li>
+        `).join('')}
+      </ul>
+    </div>
+
+    <div class="info-block">
+      <div class="info-block-title">AI Recovery Email</div>
+      <div class="email-preview">
+        <div class="email-header">
+          <div class="email-field"><span class="email-field-key">Subject:</span><span class="email-field-val">${a.suggested_email_subject||''}</span></div>
+        </div>
+        <div class="email-body">${a.suggested_email_body||''}</div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="alert('Email sent! (mock)')">📤 Send Recovery Email</button>
+    </div>
+  `;
+}
+
+// ─── Panel: Lead Detail ────────────────────────────────
+async function openLeadPanel(leadId) {
+  showPanel('Scoring Lead…', '<div class="loading-wrap"><div class="spinner"></div>Generating AI insights...</div>');
+  let data;
+  try {
+    data = await apiFetch('/score-lead', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({lead_id:leadId}) });
+  } catch {
+    const lr = leadResults.find(l=>l.lead_id===leadId);
+    data = {
+      lead:{name:lr?.name||leadId,title:'VP of Sales',company:lr?.company||'',industry:'SaaS',employees:200,revenue_usd:8000000,intent_signals:lr?.score?.top_signals||[]},
+      score:lr?.score||{score:75,grade:'B',reasoning:'Strong signals.',top_signals:[],recommended_action:'Reach out now'},
+      outreach_email:{subject:lr?.email_preview||'',body:`Hi ${(lr?.name||'').split(' ')[0]},\n\nLoved what ${lr?.company} is building. I think RevAgent could help you close 20% more deals this quarter — the AI handles outreach, risk detection, and recovery automatically.\n\nOpen to a 15-min call this week?\n\nBest,\nAlex`},
+      linkedin_enrichment:{headline:'Senior Sales Leader',connections:1200,recent_posts:[]},
+    };
+  }
+
+  const l = data.lead; const s = data.score; const e = data.outreach_email; const li = data.linkedin_enrichment;
+  document.getElementById('panel-title').textContent = l.name + ' · ' + l.company;
+  document.getElementById('panel-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+      <div class="lead-avatar" style="width:52px;height:52px;font-size:18px">${(l.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <div>
+        <div style="font-size:16px;font-weight:600">${l.name}</div>
+        <div style="font-size:13px;color:var(--blue)">${l.title} @ ${l.company}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${l.industry} · ${(l.employees||0).toLocaleString()} employees · $${((l.revenue_usd||0)/1e6).toFixed(1)}M revenue</div>
+      </div>
+      <div style="margin-left:auto;text-align:center">
+        <div class="score-chip score-${(s.grade||'b').toLowerCase()}" style="font-size:28px">${s.score||0}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Grade ${s.grade||'B'}</div>
+      </div>
+    </div>
+
+    <div class="info-block">
+      <div class="info-block-title">AI Score Reasoning</div>
+      <div class="ai-block"><div class="ai-block-label">🤖 AI Analysis</div><div class="ai-block-content">${s.reasoning||''}</div></div>
+      <div class="info-row"><div class="info-key">Recommended Action</div><div class="info-val" style="color:var(--green)">${s.recommended_action||''}</div></div>
+    </div>
+
+    <div class="info-block">
+      <div class="info-block-title">Intent Signals</div>
+      <div class="lead-signals" style="margin-top:4px">
+        ${(s.top_signals||[]).map(sig=>`<span class="signal-tag">${sig}</span>`).join('')}
+      </div>
+    </div>
+
+    ${li ? `
+    <div class="info-block">
+      <div class="info-block-title">LinkedIn Enrichment</div>
+      <div class="info-row"><div class="info-key">Headline</div><div class="info-val">${li.headline||''}</div></div>
+      <div class="info-row"><div class="info-key">Connections</div><div class="info-val">${(li.connections||0).toLocaleString()}</div></div>
+      ${(li.recent_posts||[]).length > 0 ? `<div style="margin-top:10px;font-size:12px;color:var(--text-muted)">Recent post: "${li.recent_posts[0].substring(0,100)}..."</div>` : ''}
+    </div>` : ''}
+
+    <div class="info-block">
+      <div class="info-block-title">AI-Generated Outreach Email</div>
+      <div class="email-preview">
+        <div class="email-header">
+          <div class="email-field"><span class="email-field-key">To:</span><span class="email-field-val">${l.name} &lt;${l.email||'lead@company.com'}&gt;</span></div>
+          <div class="email-field"><span class="email-field-key">Subject:</span><span class="email-field-val">${e.subject||''}</span></div>
+        </div>
+        <div class="email-body">${e.body||''}</div>
+      </div>
+      <button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="alert('Outreach email sent! (mock)')">📤 Send Outreach Email</button>
+    </div>
+  `;
+}
+
+// ─── Load Competitor Alerts (Dashboard) ───────────────
+async function loadDashAlerts() {
+  let data;
+  try { data = await apiFetch('/competitor-signals'); } catch { data = MOCK_COMPETITORS; }
+  const el = document.getElementById('dash-alerts');
+  if (!el) return;
+  el.innerHTML = (data.signals||[]).map(s=>`
+    <div class="alert-card ${s.impact==='high'?'red':''}">
+      <div class="alert-icon">${s.impact==='high'?'🔴':'🟡'}</div>
+      <div class="alert-content">
+        <div class="alert-title">${s.competitor}: ${s.headline}</div>
+        <div class="alert-body">${s.affected_deals?.length||0} of your deals are affected. Respond with battle card immediately.</div>
+        <div class="alert-meta">📰 ${s.source} · ${s.date}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Panel Helpers ─────────────────────────────────────
+function showPanel(title, bodyHtml) {
+  document.getElementById('panel-title').textContent = title;
+  document.getElementById('panel-body').innerHTML = bodyHtml;
+  document.getElementById('panel-overlay').style.display = 'flex';
+}
+
+function closePanel(e) {
+  if (!e || e.target === document.getElementById('panel-overlay')) {
+    document.getElementById('panel-overlay').style.display = 'none';
+  }
+}
+
+// ─── Init ──────────────────────────────────────────────
+(async function init() {
+  await loadAllDeals();
+  await loadDashAlerts();
+})();
+</script>
+</body>
+</html>
