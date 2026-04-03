@@ -124,7 +124,6 @@ Returns:
 
 AI generates outreach email in under 2 seconds.
 
----
 
 ### 2. Outreach Execution ✉️
 
@@ -132,7 +131,6 @@ AI generates outreach email in under 2 seconds.
 - Sent via Gmail integration  
 - Follow up email prepared  
 
----
 
 ### 3. Deal Risk Detection ⚠️
 
@@ -149,7 +147,6 @@ Returns:
 - Actions  
 - Recovery email  
 
----
 
 ### 4. Automated Intelligence 📊
 
@@ -163,7 +160,6 @@ Example:
 Battle card:
 > 2 weeks vs 6 months implementation  
 
----
 
 ### 5. Recovery Execution 🔁
 
